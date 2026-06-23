@@ -1,8 +1,37 @@
 # Closend
 
-Closend превращает красную кнопку закрытия окна macOS в завершение всего приложения.
+Closend is a tiny macOS utility that makes the red close button quit apps completely.
 
-## Сборка и запуск
+On macOS, pressing the red window button usually closes only the current window while the app keeps running in the background. Closend makes that button behave more like `⌘Q`: close the window, end the app, and keep your Dock cleaner.
+
+## Features
+
+- Makes the red macOS close button quit the app.
+- Runs quietly in the menu bar.
+- Optional Dock icon for quick access to settings.
+- Launch at login support.
+- App exclusions for programs that should keep the default macOS behavior.
+- Works locally on your Mac.
+- No accounts, analytics, ads.
+
+## Requirements
+
+- macOS 13 or later.
+- Accessibility permission.
+
+Closend needs Accessibility access so it can detect when you click the red close button. It uses this permission only for its closing behavior.
+
+## Install
+
+Download the latest ZIP from GitHub Releases, unzip it, and open `Closend.app`.
+
+On first launch, macOS may ask for Accessibility permission:
+
+`System Settings → Privacy & Security → Accessibility → Closend`
+
+If macOS says the app cannot be verified, right-click `Closend.app`, choose `Open`, then confirm. A fully notarized build requires an Apple Developer account.
+
+## Build from source
 
 ```bash
 chmod +x build-app.sh
@@ -10,17 +39,11 @@ chmod +x build-app.sh
 open dist/Closend.app
 ```
 
-При первом запуске macOS попросит доступ **Универсальный доступ (Accessibility)**.
-Разрешите Closend в **Системные настройки → Конфиденциальность и безопасность → Универсальный доступ**.
+The build script creates:
 
-Closend поставляется как готовое приложение: ничего перетаскивать или устанавливать не нужно.
+- `dist/Closend.app`
+- `dist/Closend-0.10.0.zip`
 
-Closend работает из строки меню. В настройках можно:
+## Note
 
-- включить или выключить полное закрытие;
-- настроить автоматический запуск при входе в macOS;
-- показать или скрыть фирменный значок Closend в Dock;
-- выбрать приложения-исключения, у которых красная кнопка продолжит закрывать только окно;
-- проверить и выдать разрешение «Универсальный доступ».
-
-Приложение завершает программы штатным способом, поэтому редакторы с несохранёнными документами могут показать диалог сохранения.
+Closend asks apps to quit normally. If an app has unsaved changes, macOS or the app may still show a save confirmation dialog.
