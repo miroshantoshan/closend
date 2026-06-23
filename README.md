@@ -4,7 +4,7 @@
 
 <h1 align="center">Closend</h1>
 
-Closend is a tiny macOS utility that makes the red close button quit apps completely.
+**Closend** is a tiny macOS utility that makes the red close button quit apps completely.
 
 On macOS, pressing the red window button usually closes only the current window while the app keeps running in the background. Closend makes that button behave more like `⌘Q`: close the window, end the app, and keep your Dock cleaner.
 
@@ -20,14 +20,14 @@ On macOS, pressing the red window button usually closes only the current window 
 
 ## Requirements
 
-- macOS 13 or later.
+- macOS **13** or later.
 - Accessibility permission.
 
-Closend needs Accessibility access so it can detect when you click the red close button. It uses this permission only for its closing behavior.
+**Closend** needs Accessibility access so it can detect when you click the red close button. It uses this permission only for its closing behavior.
 
 ## Install
 
-Download the latest ZIP from GitHub Releases, unzip it, and open `Closend.app`.
+Download the latest ZIP from **GitHub Releases**, unzip it, and open `Closend.app`.
 
 On first launch, macOS may ask for Accessibility permission:
 
@@ -43,16 +43,10 @@ chmod +x build-app.sh
 open dist/Closend.app
 ```
 
-The build script creates:
+The **build script** creates:
 
 - `dist/Closend.app`
 - `dist/Closend-0.10.0.zip`
-
-## Privacy
-
-Closend works locally. It does not collect personal information, send analytics, use advertising SDKs, or connect to a cloud service.
-
-Local settings such as enabled state, Dock icon visibility, launch at login, and app exclusions are stored on your Mac.
 
 ## Note
 
