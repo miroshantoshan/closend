@@ -1,4 +1,8 @@
-# Closend
+<p align="center">
+  <img src="Assets/ClosendLogo.png" alt="Closend logo" width="128" />
+</p>
+
+<h1 align="center">Closend</h1>
 
 Closend is a tiny macOS utility that makes the red close button quit apps completely.
 
@@ -12,7 +16,7 @@ On macOS, pressing the red window button usually closes only the current window 
 - Launch at login support.
 - App exclusions for programs that should keep the default macOS behavior.
 - Works locally on your Mac.
-- No accounts, analytics, ads.
+- No accounts, analytics, ads, or cloud sync.
 
 ## Requirements
 
@@ -44,6 +48,16 @@ The build script creates:
 - `dist/Closend.app`
 - `dist/Closend-0.10.0.zip`
 
+## Privacy
+
+Closend works locally. It does not collect personal information, send analytics, use advertising SDKs, or connect to a cloud service.
+
+Local settings such as enabled state, Dock icon visibility, launch at login, and app exclusions are stored on your Mac.
+
 ## Note
 
 Closend asks apps to quit normally. If an app has unsaved changes, macOS or the app may still show a save confirmation dialog.
+
+<p align="center">
+  <img src="Assets/star-it-please.svg" alt="Star it, please!" />
+</p>
