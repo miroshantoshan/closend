@@ -372,7 +372,7 @@ private final class AccessibilityClickInspector: @unchecked Sendable {
                    Set(UserDefaults.standard.stringArray(forKey: "excludedBundleIdentifiers") ?? []).contains(bundleIdentifier) {
                     return
                 }
-                application.terminate()
+                application.forceTerminate()
             }
         }
     }
