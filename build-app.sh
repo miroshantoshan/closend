@@ -3,10 +3,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP="$ROOT/dist/Closend.app"
-ZIP="$ROOT/dist/Closend-0.10.0.zip"
+ZIP="$ROOT/dist/Closend-0.25.0.zip"
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/Closend-release.XXXXXX")"
 STAGED_APP="$STAGE/Closend.app"
-STAGED_ZIP="$STAGE/Closend-0.10.0.zip"
+STAGED_ZIP="$STAGE/Closend-0.25.0.zip"
 trap 'rm -rf "$STAGE"' EXIT
 
 cd "$ROOT"

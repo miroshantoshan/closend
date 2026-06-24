@@ -6,6 +6,7 @@ final class SettingsWindowController: NSWindowController {
     private let enabledSwitch = NSSwitch()
     private let loginSwitch = NSSwitch()
     private let dockSwitch = NSSwitch()
+    private let dockWindowSwitch = NSSwitch()
     private let exclusionsDetail = NSTextField(labelWithString: "")
     private let permissionTitle = NSTextField(labelWithString: "")
     private let permissionDetail = NSTextField(wrappingLabelWithString: "")
@@ -42,6 +43,7 @@ final class SettingsWindowController: NSWindowController {
         enabledSwitch.state = app.isEnabled ? .on : .off
         loginSwitch.state = app.launchesAtLogin ? .on : .off
         dockSwitch.state = app.showDockIcon ? .on : .off
+        dockWindowSwitch.state = app.toggleWindowsFromDock ? .on : .off
         let exclusionCount = app.excludedBundleIdentifiers.count
         exclusionsDetail.stringValue = exclusionCount == 0 ? "Нет исключений" : "Исключений: \(exclusionCount)"
         let granted = app.hasAccessibilityPermission
@@ -124,6 +126,8 @@ final class SettingsWindowController: NSWindowController {
         loginSwitch.action = #selector(loginChanged)
         dockSwitch.target = self
         dockSwitch.action = #selector(dockChanged)
+        dockWindowSwitch.target = self
+        dockWindowSwitch.action = #selector(dockWindowChanged)
 
         exclusionsDetail.font = .systemFont(ofSize: 12)
         exclusionsDetail.textColor = .secondaryLabelColor
@@ -135,6 +139,8 @@ final class SettingsWindowController: NSWindowController {
         let behaviorRows = vertical([
             settingRow(title: "Закрывать приложения полностью", detail: "Красная кнопка работает как ⌘Q", control: enabledSwitch),
             separator(),
+            settingRow(title: "Сворачивать кликом по Dock", detail: "Повторный клик возвращает окно", control: dockWindowSwitch),
+            separator(),
             settingRow(title: "Запускать вместе с macOS", detail: "Closend готов сразу после включения Mac", control: loginSwitch),
             separator(),
             settingRow(title: "Показывать значок в Dock", detail: "Быстрый доступ к настройкам", control: dockSwitch),
@@ -142,13 +148,13 @@ final class SettingsWindowController: NSWindowController {
             settingRow(title: "Исключения", detailView: exclusionsDetail, control: exclusionsButton)
         ], spacing: 0)
         let behaviorCard = flatPanel(content: behaviorRows, cornerRadius: 18)
-        behaviorCard.heightAnchor.constraint(equalToConstant: 292).isActive = true
+        behaviorCard.heightAnchor.constraint(equalToConstant: 347).isActive = true
 
         let content = vertical([header, permissionHero, behaviorCard], spacing: 18)
         content.translatesAutoresizingMaskIntoConstraints = false
         settingsPage.addSubview(content)
 
-        let version = text("Версия 0.10.0", size: 11, color: .tertiaryLabelColor)
+        let version = text("Версия 0.25.0", size: 11, color: .tertiaryLabelColor)
         version.translatesAutoresizingMaskIntoConstraints = false
         settingsPage.addSubview(version)
 
@@ -191,7 +197,7 @@ final class SettingsWindowController: NSWindowController {
         isShowingExclusions = false
         refresh()
         transition(from: exclusionsPage, to: settingsPage, animated: animated)
-        resizeWindow(to: app.hasAccessibilityPermission ? 475 : 635, animated: animated)
+        resizeWindow(to: app.hasAccessibilityPermission ? 530 : 690, animated: animated)
     }
 
     private func transition(from oldView: NSView, to newView: NSView, animated: Bool = true) {
@@ -228,12 +234,12 @@ final class SettingsWindowController: NSWindowController {
 
     private func collapsePermission(animated: Bool) {
         permissionHero?.isHidden = true
-        if !isShowingExclusions { resizeWindow(to: 475, animated: animated) }
+        if !isShowingExclusions { resizeWindow(to: 530, animated: animated) }
     }
 
     private func expandPermission(animated: Bool) {
         permissionHero?.isHidden = false
-        if !isShowingExclusions { resizeWindow(to: 635, animated: animated) }
+        if !isShowingExclusions { resizeWindow(to: 690, animated: animated) }
     }
 
     private func resizeWindow(to height: CGFloat, animated: Bool) {
@@ -331,6 +337,7 @@ final class SettingsWindowController: NSWindowController {
     @objc private func permissionPressed() { app.requestAccessibilityPermission() }
     @objc private func showExclusions() { app.showExclusions() }
     @objc private func dockChanged() { app.setShowDockIcon(dockSwitch.state == .on) }
+    @objc private func dockWindowChanged() { app.setToggleWindowsFromDock(dockWindowSwitch.state == .on) }
 }
 
 private final class DarkBackgroundView: NSView {

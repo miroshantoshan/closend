@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var showDockIcon: Bool {
         didSet { UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon") }
     }
+    private(set) var toggleWindowsFromDock: Bool {
+        didSet { UserDefaults.standard.set(toggleWindowsFromDock, forKey: "toggleWindowsFromDock") }
+    }
 
     override init() {
         if UserDefaults.standard.object(forKey: "isEnabled") == nil {
@@ -29,6 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showDockIcon = true
         } else {
             showDockIcon = UserDefaults.standard.bool(forKey: "showDockIcon")
+        }
+        if UserDefaults.standard.object(forKey: "toggleWindowsFromDock") == nil {
+            toggleWindowsFromDock = true
+            UserDefaults.standard.set(true, forKey: "toggleWindowsFromDock")
+        } else {
+            toggleWindowsFromDock = UserDefaults.standard.bool(forKey: "toggleWindowsFromDock")
         }
         super.init()
     }
@@ -230,8 +239,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
-        if enabled { startEventTapIfPossible() } else { stopEventTap() }
+        synchronizeEventTapWithPermission()
         rebuildMenu()
+        settingsWindow?.refresh()
+    }
+
+    func setToggleWindowsFromDock(_ enabled: Bool) {
+        toggleWindowsFromDock = enabled
+        synchronizeEventTapWithPermission()
         settingsWindow?.refresh()
     }
 
@@ -273,7 +288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startEventTapIfPossible() {
-        guard isEnabled, AXIsProcessTrusted(), eventTap == nil else {
+        guard (isEnabled || toggleWindowsFromDock), AXIsProcessTrusted(), eventTap == nil else {
+            if !isEnabled && !toggleWindowsFromDock { stopEventTap() }
             rebuildMenu()
             return
         }
@@ -293,7 +309,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             let app = Unmanaged<AppDelegate>.fromOpaque(userInfo).takeUnretainedValue()
-            app.inspectClick(at: event.location)
+            let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            app.inspectClick(at: event.location, frontmostPID: frontmostPID)
             return Unmanaged.passUnretained(event)
         }
 
@@ -313,8 +330,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    nonisolated private func inspectClick(at point: CGPoint) {
-        clickInspector.inspect(at: point)
+    nonisolated private func inspectClick(at point: CGPoint, frontmostPID: pid_t?) {
+        clickInspector.inspect(at: point, frontmostPID: frontmostPID)
     }
 
     @objc private func toggleEnabledFromMenu() { setEnabled(!isEnabled) }
@@ -348,7 +365,7 @@ private final class AccessibilityClickInspector: @unchecked Sendable {
     private let lock = NSLock()
     private var isInspecting = false
 
-    func inspect(at point: CGPoint) {
+    func inspect(at point: CGPoint, frontmostPID: pid_t?) {
         lock.lock()
         guard !isInspecting else {
             lock.unlock()
@@ -364,29 +381,42 @@ private final class AccessibilityClickInspector: @unchecked Sendable {
                 lock.unlock()
             }
 
-            guard AXIsProcessTrusted(), let pid = applicationPID(at: point) else { return }
-            DispatchQueue.main.async {
-                guard AXIsProcessTrusted(),
-                      let application = NSRunningApplication(processIdentifier: pid) else { return }
-                if let bundleIdentifier = application.bundleIdentifier,
-                   Set(UserDefaults.standard.stringArray(forKey: "excludedBundleIdentifiers") ?? []).contains(bundleIdentifier) {
-                    return
+            guard AXIsProcessTrusted(), let clickedElement = element(at: point) else { return }
+
+            if UserDefaults.standard.bool(forKey: "isEnabled"),
+               let pid = closeButtonApplicationPID(from: clickedElement) {
+                DispatchQueue.main.async {
+                    guard AXIsProcessTrusted(),
+                          let application = NSRunningApplication(processIdentifier: pid) else { return }
+                    if let bundleIdentifier = application.bundleIdentifier,
+                       Set(UserDefaults.standard.stringArray(forKey: "excludedBundleIdentifiers") ?? []).contains(bundleIdentifier) {
+                        return
+                    }
+                    application.forceTerminate()
                 }
-                application.forceTerminate()
+                return
+            }
+
+            if UserDefaults.standard.bool(forKey: "toggleWindowsFromDock"),
+               let bundleIdentifier = dockApplicationBundleIdentifier(from: clickedElement) {
+                toggleWindows(for: bundleIdentifier, frontmostPID: frontmostPID)
             }
         }
     }
 
-    private func applicationPID(at point: CGPoint) -> pid_t? {
+    private func element(at point: CGPoint) -> AXUIElement? {
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, 0.2)
         var hitElement: AXUIElement?
         guard AXIsProcessTrusted(),
               AXUIElementCopyElementAtPosition(systemWide, Float(point.x), Float(point.y), &hitElement) == .success,
               let element = hitElement else { return nil }
+        return element
+    }
+
+    private func closeButtonApplicationPID(from element: AXUIElement) -> pid_t? {
         AXUIElementSetMessagingTimeout(element, 0.2)
         guard isCloseButton(element) else { return nil }
-
         var pid: pid_t = 0
         guard AXIsProcessTrusted(),
               AXUIElementGetPid(element, &pid) == .success,
@@ -407,6 +437,95 @@ private final class AccessibilityClickInspector: @unchecked Sendable {
             current = (parent as! AXUIElement)
         }
         return false
+    }
+
+    private func dockApplicationBundleIdentifier(from element: AXUIElement) -> String? {
+        var current: AXUIElement? = element
+        for _ in 0..<6 {
+            guard AXIsProcessTrusted(), let candidate = current else { return nil }
+            AXUIElementSetMessagingTimeout(candidate, 0.2)
+
+            if attribute(kAXRoleAttribute, of: candidate) == "AXDockItem",
+               attribute(kAXSubroleAttribute, of: candidate) == "AXApplicationDockItem",
+               let url = urlAttribute(kAXURLAttribute, of: candidate) {
+                return Bundle(url: url)?.bundleIdentifier
+            }
+
+            var parent: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(candidate, kAXParentAttribute as CFString, &parent) == .success,
+                  let parent else { return nil }
+            current = (parent as! AXUIElement)
+        }
+        return nil
+    }
+
+    private func toggleWindows(for bundleIdentifier: String, frontmostPID: pid_t?) {
+        DispatchQueue.main.async {
+            guard AXIsProcessTrusted(),
+                  let application = NSRunningApplication.runningApplications(
+                    withBundleIdentifier: bundleIdentifier
+                  ).first else { return }
+
+            let appElement = AXUIElementCreateApplication(application.processIdentifier)
+            AXUIElementSetMessagingTimeout(appElement, 0.2)
+            let windows = self.windows(of: appElement)
+            let hasOpenWindow = windows.contains { !self.boolAttribute(kAXMinimizedAttribute, of: $0) }
+            let wasFrontmost = application.processIdentifier == frontmostPID
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                guard let currentApplication = NSRunningApplication(
+                    processIdentifier: application.processIdentifier
+                ) else { return }
+                let currentAppElement = AXUIElementCreateApplication(currentApplication.processIdentifier)
+                AXUIElementSetMessagingTimeout(currentAppElement, 0.2)
+                let currentWindows = self.windows(of: currentAppElement)
+
+                if wasFrontmost && hasOpenWindow {
+                    for window in currentWindows {
+                        AXUIElementSetAttributeValue(
+                            window,
+                            kAXMinimizedAttribute as CFString,
+                            kCFBooleanTrue
+                        )
+                    }
+                } else {
+                    for window in currentWindows {
+                        AXUIElementSetAttributeValue(
+                            window,
+                            kAXMinimizedAttribute as CFString,
+                            kCFBooleanFalse
+                        )
+                    }
+                    currentApplication.activate(options: [.activateAllWindows])
+                }
+            }
+        }
+    }
+
+    private func windows(of application: AXUIElement) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            application,
+            kAXWindowsAttribute as CFString,
+            &value
+        ) == .success else { return [] }
+        return value as? [AXUIElement] ?? []
+    }
+
+    private func boolAttribute(_ name: String, of element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else {
+            return false
+        }
+        return (value as? Bool) ?? false
+    }
+
+    private func urlAttribute(_ name: String, of element: AXUIElement) -> URL? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? URL
     }
 
     private func attribute(_ name: String, of element: AXUIElement) -> String? {
