@@ -5,9 +5,9 @@
 <h1 align="center">Closend</h1>
 
 <p align="center">
-  ![swift](https://img.shields.io/badge/lang-swift-white?style=for-the-badge)
-  ![mac](https://img.shields.io/badge/for-mac-white?style=for-the-badge)
-  ![lang](https://img.shields.io/badge/lang-🇷🇺🇺🇸-white?style=for-the-badge)
+  <img src="https://img.shields.io/badge/lang-Swift-white?style=for-the-badge" alt="Swift">
+  <img src="https://img.shields.io/badge/for-macOS-white?style=for-the-badge" alt="macOS">
+  <img src="https://img.shields.io/badge/lang-🇷🇺%20🇺🇸-white?style=for-the-badge" alt="Languages">
 </p>
 
 **Closend** is a tiny macOS utility that makes the red close button quit apps completely.
