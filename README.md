@@ -4,6 +4,10 @@
 
 <h1 align="center">Closend</h1>
 
+https://img.shields.io/badge/lang-swift-white?style=for-the-badge
+https://img.shields.io/badge/for-mac-white?style=for-the-badge
+https://img.shields.io/badge/lang-🇷🇺🇺🇸-white?style=for-the-badge
+
 **Closend** is a tiny macOS utility that makes the red close button quit apps completely.
 
 On macOS, pressing the red window button usually closes only the current window while the app keeps running in the background. Closend makes that button behave more like `⌘Q`: close the window, end the app, and keep your Dock cleaner.
